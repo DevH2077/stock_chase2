@@ -2,6 +2,11 @@
 
 주식 현재 시세를 실시간으로 확인할 수 있는 Progressive Web App입니다.
 
+## 🌐 라이브 사이트
+
+GitHub Pages로 호스팅 중:
+**https://devh2077.github.io/stock_chase2/**
+
 ## 기능
 
 - 📈 실시간 주식 시세 조회
@@ -10,6 +15,9 @@
 - 📱 모바일 반응형 디자인
 - 🔌 오프라인 지원 (Service Worker)
 - ➕ 여러 주식 동시 추적
+- 📌 고정 종목 기능 (30초마다 자동 업데이트)
+- 🔔 가격 알림 기능 (목표 가격/퍼센트 도달 시 알림)
+- 🎯 드래그 앤 드롭으로 종목 관리
 
 ## 사용 방법
 
@@ -75,9 +83,20 @@ version_1/
 - Safari (iOS 11.3+)
 - Samsung Internet
 
+## GitHub Pages 설정
+
+무료 호스팅을 위해 GitHub Pages를 사용합니다.
+
+1. 저장소 Settings > Pages로 이동
+2. Source: `main` 브랜치 선택
+3. 몇 분 후 https://devh2077.github.io/stock_chase2/ 에서 접속 가능
+
+자세한 설정 방법은 [GITHUB_PAGES_SETUP.md](./GITHUB_PAGES_SETUP.md) 참고
+
 ## 참고사항
 
 - Alpha Vantage 무료 API는 분당 5회, 일일 500회 호출 제한이 있습니다
 - API 제한에 도달하면 예제 데이터가 표시됩니다
 - HTTPS 환경에서만 Service Worker가 작동합니다 (localhost는 예외)
+- GitHub Pages는 자동으로 HTTPS를 제공합니다
 
