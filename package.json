@@ -1,0 +1,13 @@
+{
+  "name": "stock-pwa",
+  "version": "1.0.0",
+  "description": "주식 시세 PWA",
+  "scripts": {
+    "update-version": "node update-version.js",
+    "prepush": "node update-version.js && git add index.html app.js && git commit -m \"Auto update version\" || true"
+  },
+  "keywords": ["pwa", "stock", "finance"],
+  "author": "",
+  "license": "MIT"
+}
+

@@ -3,30 +3,24 @@ let stocks = [];
 // 알림 목록
 let alerts = [];
 
+// 앱 버전 (빌드/배포 시점에 설정, 푸시할 때마다 update-version.js로 업데이트)
+const APP_VERSION = 'v2512301611'; // update-version.js로 자동 업데이트됨
+
 // 버전 표시 (고정된 업데이트 시간)
 function displayVersion() {
-    // HTML에 하드코딩된 버전 사용 (빌드 시점에 고정)
-    // 또는 manifest나 메타 태그에서 읽어오기
     const versionBadge = document.getElementById('versionBadge');
     if (versionBadge) {
-        // 버전이 이미 HTML에 있으면 그대로 사용
-        // 없으면 기본값 표시
-        if (!versionBadge.textContent || versionBadge.textContent === 'v3') {
-            // 현재 시간을 버전으로 설정 (최초 로드 시에만)
-            const now = new Date();
-            const year = now.getFullYear().toString().slice(-2);
-            const month = String(now.getMonth() + 1).padStart(2, '0');
-            const day = String(now.getDate()).padStart(2, '0');
-            const hour = String(now.getHours()).padStart(2, '0');
-            const minute = String(now.getMinutes()).padStart(2, '0');
-            const version = `v${year}${month}${day}${hour}${minute}`;
-            versionBadge.textContent = version;
+        // HTML에 하드코딩된 버전이 있으면 사용, 없으면 APP_VERSION 상수 사용
+        if (versionBadge.textContent && versionBadge.textContent.trim() !== '') {
+            // HTML에 이미 버전이 있으면 그대로 사용 (빌드 시점에 설정됨)
+            return;
         }
-        // 이미 버전이 있으면 그대로 유지 (새로고침해도 변경되지 않음)
+        // HTML에 버전이 없으면 APP_VERSION 상수 사용
+        versionBadge.textContent = APP_VERSION;
     }
 }
 
-// 페이지 로드 시 버전 표시 (한 번만)
+// 페이지 로드 시 버전 표시 (고정값, 새로고침해도 변경되지 않음)
 displayVersion();
 
 // DOM 요소
