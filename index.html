@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="주식 현재 시세를 실시간으로 확인하는 PWA">
+    <meta name="theme-color" content="#2196F3">
+    <title>주식 시세 PWA</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="icon" type="image/png" href="icon-192.png">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📈 주식 시세</h1>
+            <button id="refreshBtn" class="refresh-btn" aria-label="새로고침">🔄</button>
+        </header>
+
+        <div class="search-section">
+            <input 
+                type="text" 
+                id="stockInput" 
+                placeholder="주식 심볼 입력 (예: AAPL, TSLA, 005930)"
+                autocomplete="off"
+            >
+            <button id="searchBtn">검색</button>
+        </div>
+
+        <div id="errorMessage" class="error-message" style="display: none;"></div>
+
+        <div class="stock-layout">
+            <div class="stock-section">
+                <h2 class="section-title">📌 고정 종목</h2>
+                <div id="pinnedStocks" class="stock-list-pinned drop-zone">
+                    <!-- 고정된 주식들이 여기에 표시됩니다 -->
+                </div>
+            </div>
+            
+            <div class="stock-section">
+                <h2 class="section-title">🔍 최신 검색</h2>
+                <div id="latestStock" class="stock-list-latest">
+                    <!-- 최신 검색 주식이 여기에 표시됩니다 -->
+                </div>
+            </div>
+            
+            <div class="stock-section">
+                <h2 class="section-title">📋 검색 기록</h2>
+                <div id="recentStocks" class="stock-list-recent drop-zone">
+                    <!-- 이전 검색 주식들이 여기에 표시됩니다 -->
+                </div>
+            </div>
+            
+            <div class="stock-section">
+                <h2 class="section-title">🔔 가격 알림</h2>
+                <div id="alertsSection" class="alerts-section">
+                    <div class="alert-form">
+                        <select id="alertSymbol" class="alert-select">
+                            <option value="">티커 선택</option>
+                        </select>
+                        <div class="alert-type-selector">
+                            <label>
+                                <input type="radio" name="alertType" value="price" checked>
+                                가격
+                            </label>
+                            <label>
+                                <input type="radio" name="alertType" value="percent">
+                                퍼센트
+                            </label>
+                        </div>
+                        <input 
+                            type="number" 
+                            id="alertValue" 
+                            class="alert-input" 
+                            placeholder="목표 가격 또는 %"
+                            step="0.01"
+                        >
+                        <select id="alertDirection" class="alert-select">
+                            <option value="above">이상 도달</option>
+                            <option value="below">이하 도달</option>
+                        </select>
+                        <button id="addAlertBtn" class="alert-btn">알림 추가</button>
+                    </div>
+                    <div id="alertsList" class="alerts-list">
+                        <!-- 알림 목록이 여기에 표시됩니다 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="loading" class="loading" style="display: none;">
+            <div class="spinner"></div>
+            <p>데이터를 불러오는 중...</p>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        // 서비스 워커 등록
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('service-worker.js')
+                    .then(reg => console.log('Service Worker 등록 성공:', reg))
+                    .catch(err => console.log('Service Worker 등록 실패:', err));
+            });
+        }
+    </script>
+</body>
+</html>
+

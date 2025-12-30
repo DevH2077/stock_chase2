@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>아이콘 생성기</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            text-align: center;
+        }
+        canvas {
+            border: 1px solid #ccc;
+            margin: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            margin: 10px;
+            cursor: pointer;
+            background: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+        button:hover {
+            background: #1976D2;
+        }
+    </style>
+</head>
+<body>
+    <h1>PWA 아이콘 생성기</h1>
+    <p>아래 버튼을 클릭하여 아이콘을 생성하고 다운로드하세요.</p>
+    
+    <canvas id="icon192" width="192" height="192"></canvas>
+    <canvas id="icon512" width="512" height="512"></canvas>
+    
+    <div>
+        <button onclick="generateIcons()">아이콘 생성</button>
+        <button onclick="downloadIcon(192)">192x192 다운로드</button>
+        <button onclick="downloadIcon(512)">512x512 다운로드</button>
+    </div>
+
+    <script>
+        function generateIcons() {
+            const sizes = [192, 512];
+            
+            sizes.forEach(size => {
+                const canvas = document.getElementById(`icon${size}`);
+                const ctx = canvas.getContext('2d');
+                
+                // 배경 그라데이션
+                const gradient = ctx.createLinearGradient(0, 0, size, size);
+                gradient.addColorStop(0, '#667eea');
+                gradient.addColorStop(1, '#764ba2');
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0, size, size);
+                
+                // 주식 차트 아이콘 그리기
+                ctx.fillStyle = 'white';
+                ctx.font = `bold ${size * 0.3}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('📈', size / 2, size / 2);
+            });
+        }
+        
+        function downloadIcon(size) {
+            const canvas = document.getElementById(`icon${size}`);
+            const link = document.createElement('a');
+            link.download = `icon-${size}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+        
+        // 페이지 로드 시 자동 생성
+        window.onload = generateIcons;
+    </script>
+</body>
+</html>
+
