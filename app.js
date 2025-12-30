@@ -8,7 +8,7 @@ let periodicAlerts = [];
 let periodicIntervals = {};
 
 // 앱 버전 (빌드/배포 시점에 설정, 푸시할 때마다 update-version.js로 업데이트)
-const APP_VERSION = 'v2512301710'; // update-version.js로 자동 업데이트됨
+const APP_VERSION = 'v2512301717'; // update-version.js로 자동 업데이트됨
 
 // 버전 표시 (고정된 업데이트 시간)
 function displayVersion() {
@@ -881,6 +881,28 @@ function triggerAlert(alert, currentPrice) {
 
 // 알림 발송 함수 (Service Worker 우선 - 앱 푸시처럼 작동)
 async function sendNotification(title, message, alertId) {
+    // 알림 권한 확인
+    if (!('Notification' in window)) {
+        console.warn('[알림] 이 브라우저는 알림을 지원하지 않습니다.');
+        return;
+    }
+
+    if (Notification.permission !== 'granted') {
+        console.warn('[알림] 알림 권한이 없습니다. 현재 권한:', Notification.permission);
+        try {
+            const permission = await Notification.requestPermission();
+            if (permission !== 'granted') {
+                console.warn('[알림] 알림 권한이 거부되었습니다.');
+                return;
+            }
+        } catch (error) {
+            console.error('[알림] 권한 요청 실패:', error);
+            return;
+        }
+    }
+
+    console.log(`[알림] 알림 발송 시도: ${title} - ${message}`);
+
     // Service Worker 알림 (백그라운드에서도 작동, 앱이 닫혀 있어도 작동)
     if ('serviceWorker' in navigator) {
         try {
@@ -996,6 +1018,22 @@ function handleAddPeriodicAlert() {
 }
 
 function addPeriodicAlert(symbol, interval, stock) {
+    // 알림 권한 확인
+    if ('Notification' in window && Notification.permission !== 'granted') {
+        Notification.requestPermission().then(permission => {
+            if (permission === 'granted') {
+                createPeriodicAlert(symbol, interval, stock);
+            } else {
+                showError('알림 권한이 필요합니다. 브라우저 설정에서 알림을 허용해주세요.');
+            }
+        });
+        return;
+    }
+
+    createPeriodicAlert(symbol, interval, stock);
+}
+
+function createPeriodicAlert(symbol, interval, stock) {
     const periodicAlert = {
         id: Date.now(),
         symbol: symbol,
@@ -1013,10 +1051,57 @@ function addPeriodicAlert(symbol, interval, stock) {
     renderAlerts();
     
     showSuccessMessage(`주기적 알림이 시작되었습니다: ${periodicAlert.symbol} (${interval}초마다)`);
+    console.log(`[주기적 알림] 등록됨: ${periodicAlert.symbol} (${interval}초마다)`);
     
     // 폼 초기화
     periodicAlertSymbol.value = '';
     showError('');
+}
+
+// 주기적 알림 체크 함수 (재사용 가능)
+async function checkPeriodicAlert(periodicAlert) {
+    if (!periodicAlert.active) {
+        return;
+    }
+
+    try {
+        console.log(`[주기적 알림] ${periodicAlert.symbol} 체크 중...`);
+        
+        // 주식 데이터 가져오기
+        const stockData = await fetchStockData(periodicAlert.symbol);
+        if (!stockData) {
+            console.warn(`[주기적 알림] ${periodicAlert.symbol} 데이터를 가져올 수 없습니다.`);
+            return;
+        }
+
+        const currentPrice = stockData.price;
+        const previousPrice = periodicAlert.lastPrice;
+
+        console.log(`[주기적 알림] ${periodicAlert.symbol} - 이전: $${previousPrice}, 현재: $${currentPrice}`);
+
+        // 가격이 변경되었으면 알림 발송
+        if (Math.abs(currentPrice - previousPrice) > 0.001) { // 부동소수점 오차 고려
+            const change = currentPrice - previousPrice;
+            const changePercent = ((change / previousPrice) * 100).toFixed(2);
+            const direction = change >= 0 ? '▲' : '▼';
+            
+            const title = `${periodicAlert.symbol} 시세 변경`;
+            const message = `${periodicAlert.name}: $${formatNumber(currentPrice)} (${direction}${formatNumber(Math.abs(change))}, ${direction}${Math.abs(changePercent)}%)`;
+            
+            console.log(`[주기적 알림] 알림 발송: ${title} - ${message}`);
+            await sendNotification(title, message, `periodic-${periodicAlert.id}`);
+            
+            // 마지막 가격 업데이트
+            periodicAlert.lastPrice = currentPrice;
+            periodicAlert.lastCheck = new Date().toISOString();
+            savePeriodicAlertsToStorage();
+            renderAlerts();
+        } else {
+            console.log(`[주기적 알림] ${periodicAlert.symbol} 가격 변경 없음`);
+        }
+    } catch (error) {
+        console.error(`[주기적 알림] 체크 실패 (${periodicAlert.symbol}):`, error);
+    }
 }
 
 // 주기적 알림 시작
@@ -1026,44 +1111,21 @@ function startPeriodicCheck(periodicAlert) {
         clearInterval(periodicIntervals[periodicAlert.id]);
     }
 
-    const intervalId = setInterval(async () => {
+    // 즉시 한 번 체크
+    checkPeriodicAlert(periodicAlert);
+
+    // 주기적으로 체크
+    const intervalId = setInterval(() => {
         if (!periodicAlert.active) {
             clearInterval(intervalId);
             delete periodicIntervals[periodicAlert.id];
             return;
         }
-
-        try {
-            // 주식 데이터 가져오기
-            const stockData = await fetchStockData(periodicAlert.symbol);
-            if (!stockData) return;
-
-            const currentPrice = stockData.price;
-            const previousPrice = periodicAlert.lastPrice;
-
-            // 가격이 변경되었으면 알림 발송
-            if (currentPrice !== previousPrice) {
-                const change = currentPrice - previousPrice;
-                const changePercent = ((change / previousPrice) * 100).toFixed(2);
-                const direction = change >= 0 ? '▲' : '▼';
-                
-                const title = `${periodicAlert.symbol} 시세 변경`;
-                const message = `${periodicAlert.name}: $${formatNumber(currentPrice)} (${direction}${formatNumber(Math.abs(change))}, ${direction}${Math.abs(changePercent)}%)`;
-                
-                await sendNotification(title, message, `periodic-${periodicAlert.id}`);
-                
-                // 마지막 가격 업데이트
-                periodicAlert.lastPrice = currentPrice;
-                periodicAlert.lastCheck = new Date().toISOString();
-                savePeriodicAlertsToStorage();
-                renderAlerts();
-            }
-        } catch (error) {
-            console.error(`주기적 알림 체크 실패 (${periodicAlert.symbol}):`, error);
-        }
+        checkPeriodicAlert(periodicAlert);
     }, periodicAlert.interval * 1000);
 
     periodicIntervals[periodicAlert.id] = intervalId;
+    console.log(`[주기적 알림] ${periodicAlert.symbol} 모니터링 시작 (${periodicAlert.interval}초마다)`);
 }
 
 // 주기적 알림 중지
@@ -1340,6 +1402,22 @@ setInterval(() => {
     if (stocks.length > 0 && alerts.length > 0) {
         checkAlerts();
     }
+    // 주기적 알림도 체크
+    if (periodicAlerts.length > 0) {
+        periodicAlerts.forEach(alert => {
+            if (alert.active) {
+                // 각 주기적 알림의 마지막 체크 시간 확인
+                const lastCheck = new Date(alert.lastCheck);
+                const now = new Date();
+                const secondsSinceLastCheck = Math.floor((now - lastCheck) / 1000);
+                
+                // 주기 시간이 지났으면 체크
+                if (secondsSinceLastCheck >= alert.interval) {
+                    checkPeriodicAlert(alert);
+                }
+            }
+        });
+    }
 }, 10 * 1000);
 
 // Service Worker와 통신하여 백그라운드 알림 체크
@@ -1349,6 +1427,25 @@ if ('serviceWorker' in navigator) {
             // Service Worker가 알림 체크를 요청하면 실행
             if (stocks.length > 0 && alerts.length > 0) {
                 checkAlerts();
+            }
+            // 주기적 알림도 체크
+            if (periodicAlerts.length > 0) {
+                periodicAlerts.forEach(alert => {
+                    if (alert.active) {
+                        checkPeriodicAlert(alert);
+                    }
+                });
+            }
+        }
+        
+        if (event.data && event.data.type === 'CHECK_PERIODIC_ALERTS') {
+            // Service Worker가 주기적 알림 체크를 요청
+            if (periodicAlerts.length > 0) {
+                periodicAlerts.forEach(alert => {
+                    if (alert.active) {
+                        checkPeriodicAlert(alert);
+                    }
+                });
             }
         }
     });

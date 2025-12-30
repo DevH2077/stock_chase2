@@ -41,7 +41,15 @@ function startBackgroundCheck() {
             type: 'CHECK_ALERTS',
             timestamp: Date.now()
           });
+          // 주기적 알림도 체크
+          client.postMessage({
+            type: 'CHECK_PERIODIC_ALERTS',
+            timestamp: Date.now()
+          });
         });
+      } else {
+        // 클라이언트가 없어도 주기적 알림은 체크 가능 (제한적)
+        console.log('[Service Worker] 백그라운드에서 주기적 알림 체크 (클라이언트 없음)');
       }
     } catch (error) {
       console.error('백그라운드 알림 체크 실패:', error);
