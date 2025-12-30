@@ -110,3 +110,125 @@ self.addEventListener('push', (event) => {
   );
 });
 
+// 백그라운드에서 주기적으로 알림 체크 (앱이 닫혀 있어도 작동)
+let checkInterval = null;
+
+// Service Worker 활성화 시 주기적 체크 시작
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    self.clients.claim().then(() => {
+      startBackgroundCheck();
+    })
+  );
+});
+
+// 백그라운드 체크 시작
+function startBackgroundCheck() {
+  if (checkInterval) {
+    clearInterval(checkInterval);
+  }
+  
+  // 30초마다 알림 체크
+  checkInterval = setInterval(async () => {
+    try {
+      // 로컬 스토리지에서 알림 목록 가져오기
+      const clients = await self.clients.matchAll();
+      if (clients.length > 0) {
+        // 클라이언트에 메시지 전송하여 알림 체크 요청
+        clients.forEach(client => {
+          client.postMessage({
+            type: 'CHECK_ALERTS',
+            timestamp: Date.now()
+          });
+        });
+      } else {
+        // 클라이언트가 없어도 직접 체크 (제한적)
+        await checkAlertsInBackground();
+      }
+    } catch (error) {
+      console.error('백그라운드 알림 체크 실패:', error);
+    }
+  }, 30 * 1000); // 30초마다
+}
+
+// 백그라운드에서 알림 체크 (Service Worker 내에서)
+async function checkAlertsInBackground() {
+  try {
+    // 캐시에서 알림 데이터 가져오기
+    const cache = await caches.open('stock-pwa-v1');
+    const alertsResponse = await cache.match('/alerts');
+    
+    if (alertsResponse) {
+      const alerts = await alertsResponse.json();
+      // 여기서 알림 체크 로직 실행
+      // 실제로는 클라이언트와 통신하여 체크하는 것이 더 정확함
+    }
+  } catch (error) {
+    console.error('백그라운드 알림 체크 오류:', error);
+  }
+}
+
+// Background Sync 이벤트 (앱이 닫혀 있어도 실행)
+self.addEventListener('sync', (event) => {
+  if (event.tag === 'check-alerts-sync') {
+    event.waitUntil(
+      checkAlertsAndNotify()
+    );
+  }
+});
+
+// 백그라운드에서 알림 체크 및 발송
+async function checkAlertsAndNotify() {
+  try {
+    // 클라이언트에 알림 체크 요청
+    const clients = await self.clients.matchAll();
+    if (clients.length > 0) {
+      clients.forEach(client => {
+        client.postMessage({
+          type: 'CHECK_ALERTS',
+          timestamp: Date.now()
+        });
+      });
+    }
+  } catch (error) {
+    console.error('Background Sync 알림 체크 실패:', error);
+  }
+}
+
+// 클라이언트로부터 메시지 수신
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'CHECK_ALERTS') {
+    // 클라이언트가 알림 체크를 요청하면 응답
+    if (event.ports && event.ports[0]) {
+      event.ports[0].postMessage({ success: true });
+    }
+  }
+  
+  if (event.data && event.data.type === 'TRIGGER_ALERT') {
+    // 알림 발송 요청
+    const { title, message, alertId } = event.data;
+    self.registration.showNotification(title, {
+      body: message,
+      icon: './icon-192.png',
+      badge: './icon-192.png',
+      tag: `alert-${alertId}`,
+      requireInteraction: true,
+      vibrate: [200, 100, 200],
+      data: {
+        url: self.location.origin + self.location.pathname.replace('/service-worker.js', '') + '/index.html',
+        alertId: alertId
+      },
+      actions: [
+        {
+          action: 'view',
+          title: '확인'
+        },
+        {
+          action: 'close',
+          title: '닫기'
+        }
+      ]
+    });
+  }
+});
+

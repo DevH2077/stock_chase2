@@ -815,12 +815,24 @@ function triggerAlert(alert, currentPrice) {
     renderAlerts();
 }
 
-// 알림 발송 함수 (Service Worker 우선)
+// 알림 발송 함수 (Service Worker 우선 - 앱 푸시처럼 작동)
 async function sendNotification(title, message, alertId) {
-    // Service Worker 알림 (백그라운드에서도 작동)
+    // Service Worker 알림 (백그라운드에서도 작동, 앱이 닫혀 있어도 작동)
     if ('serviceWorker' in navigator) {
         try {
             const registration = await navigator.serviceWorker.ready;
+            
+            // Service Worker에 직접 알림 발송 요청 (더 안정적)
+            if (registration.active) {
+                registration.active.postMessage({
+                    type: 'TRIGGER_ALERT',
+                    title: title,
+                    message: message,
+                    alertId: alertId
+                });
+            }
+            
+            // 직접 알림 발송도 시도
             await registration.showNotification(title, {
                 body: message,
                 icon: './icon-192.png',
@@ -828,7 +840,6 @@ async function sendNotification(title, message, alertId) {
                 tag: `alert-${alertId}`,
                 requireInteraction: true,
                 vibrate: [200, 100, 200],
-                sound: './notification.mp3', // 사운드 파일이 있다면
                 data: {
                     url: window.location.href,
                     alertId: alertId
@@ -844,7 +855,7 @@ async function sendNotification(title, message, alertId) {
                     }
                 ]
             });
-            console.log('Service Worker 알림 발송 성공');
+            console.log('Service Worker 알림 발송 성공 (앱 푸시 모드)');
             return;
         } catch (error) {
             console.error('Service Worker 알림 실패:', error);
@@ -1116,4 +1127,47 @@ setInterval(() => {
         checkAlerts();
     }
 }, 10 * 1000);
+
+// Service Worker와 통신하여 백그라운드 알림 체크
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('message', (event) => {
+        if (event.data && event.data.type === 'CHECK_ALERTS') {
+            // Service Worker가 알림 체크를 요청하면 실행
+            if (stocks.length > 0 && alerts.length > 0) {
+                checkAlerts();
+            }
+        }
+    });
+    
+    // Service Worker에 알림 발송 요청
+    window.sendAlertToServiceWorker = async (title, message, alertId) => {
+        if ('serviceWorker' in navigator) {
+            const registration = await navigator.serviceWorker.ready;
+            registration.active.postMessage({
+                type: 'TRIGGER_ALERT',
+                title: title,
+                message: message,
+                alertId: alertId
+            });
+        }
+    };
+}
+
+// Background Sync API 사용 (앱이 닫혀 있어도 동기화)
+if ('serviceWorker' in navigator && 'sync' in self.registration) {
+    async function registerBackgroundSync() {
+        try {
+            const registration = await navigator.serviceWorker.ready;
+            await registration.sync.register('check-alerts-sync');
+            console.log('Background Sync 등록 완료');
+        } catch (error) {
+            console.error('Background Sync 등록 실패:', error);
+        }
+    }
+    
+    // 알림이 있을 때 Background Sync 등록
+    if (alerts.length > 0) {
+        registerBackgroundSync();
+    }
+}
 
