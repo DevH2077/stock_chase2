@@ -4,7 +4,8 @@
   "description": "주식 시세 PWA",
   "scripts": {
     "update-version": "node update-version.js",
-    "prepush": "node update-version.js && git add index.html app.js && git commit -m \"Auto update version\" || true"
+    "prepush": "node update-version.js && git add index.html app.js && git commit -m \"Auto update version to latest push time (KST)\" && echo ✅ 버전이 업데이트되었습니다. 이제 git push를 실행하세요.",
+    "push": "npm run prepush && git push"
   },
   "keywords": ["pwa", "stock", "finance"],
   "author": "",
