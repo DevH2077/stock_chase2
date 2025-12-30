@@ -21,18 +21,54 @@ self.addEventListener('install', (event) => {
   );
 });
 
+// 백그라운드에서 주기적으로 알림 체크 (앱이 닫혀 있어도 작동)
+let checkInterval = null;
+
+// 백그라운드 체크 시작
+function startBackgroundCheck() {
+  if (checkInterval) {
+    clearInterval(checkInterval);
+  }
+  
+  // 30초마다 알림 체크
+  checkInterval = setInterval(async () => {
+    try {
+      const clients = await self.clients.matchAll();
+      if (clients.length > 0) {
+        // 클라이언트에 메시지 전송하여 알림 체크 요청
+        clients.forEach(client => {
+          client.postMessage({
+            type: 'CHECK_ALERTS',
+            timestamp: Date.now()
+          });
+        });
+      }
+    } catch (error) {
+      console.error('백그라운드 알림 체크 실패:', error);
+    }
+  }, 30 * 1000); // 30초마다
+}
+
 // 활성화 이벤트
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            console.log('이전 캐시 삭제:', cacheName);
-            return caches.delete(cacheName);
-          }
-        })
-      );
+    Promise.all([
+      // 캐시 정리
+      caches.keys().then((cacheNames) => {
+        return Promise.all(
+          cacheNames.map((cacheName) => {
+            if (cacheName !== CACHE_NAME) {
+              console.log('이전 캐시 삭제:', cacheName);
+              return caches.delete(cacheName);
+            }
+          })
+        );
+      }),
+      // 클라이언트 제어
+      self.clients.claim()
+    ]).then(() => {
+      // 백그라운드 체크 시작
+      startBackgroundCheck();
     })
   );
 });
@@ -110,63 +146,6 @@ self.addEventListener('push', (event) => {
   );
 });
 
-// 백그라운드에서 주기적으로 알림 체크 (앱이 닫혀 있어도 작동)
-let checkInterval = null;
-
-// Service Worker 활성화 시 주기적 체크 시작
-self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    self.clients.claim().then(() => {
-      startBackgroundCheck();
-    })
-  );
-});
-
-// 백그라운드 체크 시작
-function startBackgroundCheck() {
-  if (checkInterval) {
-    clearInterval(checkInterval);
-  }
-  
-  // 30초마다 알림 체크
-  checkInterval = setInterval(async () => {
-    try {
-      // 로컬 스토리지에서 알림 목록 가져오기
-      const clients = await self.clients.matchAll();
-      if (clients.length > 0) {
-        // 클라이언트에 메시지 전송하여 알림 체크 요청
-        clients.forEach(client => {
-          client.postMessage({
-            type: 'CHECK_ALERTS',
-            timestamp: Date.now()
-          });
-        });
-      } else {
-        // 클라이언트가 없어도 직접 체크 (제한적)
-        await checkAlertsInBackground();
-      }
-    } catch (error) {
-      console.error('백그라운드 알림 체크 실패:', error);
-    }
-  }, 30 * 1000); // 30초마다
-}
-
-// 백그라운드에서 알림 체크 (Service Worker 내에서)
-async function checkAlertsInBackground() {
-  try {
-    // 캐시에서 알림 데이터 가져오기
-    const cache = await caches.open('stock-pwa-v1');
-    const alertsResponse = await cache.match('/alerts');
-    
-    if (alertsResponse) {
-      const alerts = await alertsResponse.json();
-      // 여기서 알림 체크 로직 실행
-      // 실제로는 클라이언트와 통신하여 체크하는 것이 더 정확함
-    }
-  } catch (error) {
-    console.error('백그라운드 알림 체크 오류:', error);
-  }
-}
 
 // Background Sync 이벤트 (앱이 닫혀 있어도 실행)
 self.addEventListener('sync', (event) => {
