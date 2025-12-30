@@ -68,10 +68,16 @@ self.addEventListener('fetch', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   
+  const action = event.action;
+  const baseUrl = self.location.origin + self.location.pathname.replace('/service-worker.js', '');
+  
+  if (action === 'close') {
+    return;
+  }
+  
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
       // 이미 열려있는 창이 있으면 포커스
-      const baseUrl = self.location.origin + self.location.pathname.replace('/service-worker.js', '');
       for (let i = 0; i < clientList.length; i++) {
         const client = clientList[i];
         if (client.url.startsWith(baseUrl) && 'focus' in client) {
@@ -83,6 +89,24 @@ self.addEventListener('notificationclick', (event) => {
         return clients.openWindow(baseUrl + '/index.html');
       }
     })
+  );
+});
+
+// 백그라운드에서 알림 발송 (push 이벤트)
+self.addEventListener('push', (event) => {
+  const data = event.data ? event.data.json() : {};
+  const title = data.title || '📈 주식 알림';
+  const options = {
+    body: data.body || '알림이 도착했습니다.',
+    icon: './icon-192.png',
+    badge: './icon-192.png',
+    vibrate: [200, 100, 200],
+    requireInteraction: true,
+    data: data
+  };
+  
+  event.waitUntil(
+    self.registration.showNotification(title, options)
   );
 });
 

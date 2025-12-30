@@ -3,6 +3,27 @@ let stocks = [];
 // 알림 목록
 let alerts = [];
 
+// 버전 자동 갱신 (년월일시분 형식)
+function updateVersion() {
+    const now = new Date();
+    const year = now.getFullYear().toString().slice(-2); // 마지막 2자리
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hour = String(now.getHours()).padStart(2, '0');
+    const minute = String(now.getMinutes()).padStart(2, '0');
+    const version = `v${year}${month}${day}${hour}${minute}`;
+    
+    const versionBadge = document.getElementById('versionBadge');
+    if (versionBadge) {
+        versionBadge.textContent = version;
+    }
+}
+
+// 페이지 로드 시 버전 업데이트
+updateVersion();
+// 매 분마다 버전 업데이트
+setInterval(updateVersion, 60 * 1000);
+
 // DOM 요소
 const stockInput = document.getElementById('stockInput');
 const searchBtn = document.getElementById('searchBtn');
@@ -759,32 +780,72 @@ function triggerAlert(alert, currentPrice) {
         ? `${alert.symbol}가 $${formatNumber(currentPrice)}에 도달했습니다!`
         : `${alert.symbol}가 ${alert.value}% ${alert.direction === 'above' ? '상승' : '하락'}했습니다!`;
 
-    // 브라우저 알림
-    if ('Notification' in window && Notification.permission === 'granted') {
-        new Notification('📈 주식 알림', {
-            body: message,
-            icon: './icon-192.png',
-            badge: './icon-192.png',
-            tag: `alert-${alert.id}`,
-            requireInteraction: true
-        });
-    }
+    // 알림 발송 (Service Worker 우선, 브라우저 알림 폴백)
+    sendNotification('📈 주식 알림', message, alert.id);
 
-    // Service Worker 알림 (백그라운드)
+    renderAlerts();
+}
+
+// 알림 발송 함수 (Service Worker 우선)
+async function sendNotification(title, message, alertId) {
+    // Service Worker 알림 (백그라운드에서도 작동)
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.ready.then(registration => {
-            registration.showNotification('📈 주식 알림', {
+        try {
+            const registration = await navigator.serviceWorker.ready;
+            await registration.showNotification(title, {
                 body: message,
                 icon: './icon-192.png',
                 badge: './icon-192.png',
-                tag: `alert-${alert.id}`,
+                tag: `alert-${alertId}`,
                 requireInteraction: true,
-                vibrate: [200, 100, 200]
+                vibrate: [200, 100, 200],
+                sound: './notification.mp3', // 사운드 파일이 있다면
+                data: {
+                    url: window.location.href,
+                    alertId: alertId
+                },
+                actions: [
+                    {
+                        action: 'view',
+                        title: '확인'
+                    },
+                    {
+                        action: 'close',
+                        title: '닫기'
+                    }
+                ]
             });
-        });
+            console.log('Service Worker 알림 발송 성공');
+            return;
+        } catch (error) {
+            console.error('Service Worker 알림 실패:', error);
+        }
     }
 
-    renderAlerts();
+    // Service Worker 실패 시 브라우저 알림 사용
+    if ('Notification' in window && Notification.permission === 'granted') {
+        try {
+            new Notification(title, {
+                body: message,
+                icon: './icon-192.png',
+                badge: './icon-192.png',
+                tag: `alert-${alertId}`,
+                requireInteraction: true
+            });
+            console.log('브라우저 알림 발송 성공');
+        } catch (error) {
+            console.error('브라우저 알림 실패:', error);
+        }
+    } else if ('Notification' in window && Notification.permission === 'default') {
+        // 권한이 없으면 요청
+        Notification.requestPermission().then(permission => {
+            if (permission === 'granted') {
+                sendNotification(title, message, alertId);
+            } else {
+                console.warn('알림 권한이 거부되었습니다.');
+            }
+        });
+    }
 }
 
 // 알림 삭제
