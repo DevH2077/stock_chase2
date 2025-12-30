@@ -30,7 +30,7 @@ function startBackgroundCheck() {
     clearInterval(checkInterval);
   }
   
-  // 30초마다 알림 체크
+  // 15초마다 알림 체크 (주기적 알림의 최소 주기인 15초에 맞춤)
   checkInterval = setInterval(async () => {
     try {
       const clients = await self.clients.matchAll();
@@ -41,20 +41,20 @@ function startBackgroundCheck() {
             type: 'CHECK_ALERTS',
             timestamp: Date.now()
           });
-          // 주기적 알림도 체크
+          // 주기적 알림도 체크 (메모리의 stocks 배열 사용 - 백그라운드에서도 작동)
           client.postMessage({
             type: 'CHECK_PERIODIC_ALERTS',
             timestamp: Date.now()
           });
         });
       } else {
-        // 클라이언트가 없어도 주기적 알림은 체크 가능 (제한적)
-        console.log('[Service Worker] 백그라운드에서 주기적 알림 체크 (클라이언트 없음)');
+        // 클라이언트가 없으면 주기적 알림 체크 불가 (네트워크 요청 필요)
+        console.log('[Service Worker] 백그라운드에서 주기적 알림 체크 불가 (클라이언트 없음)');
       }
     } catch (error) {
       console.error('백그라운드 알림 체크 실패:', error);
     }
-  }, 30 * 1000); // 30초마다
+  }, 15 * 1000); // 15초마다 (주기적 알림의 최소 주기)
 }
 
 // 활성화 이벤트

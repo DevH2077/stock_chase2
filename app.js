@@ -8,7 +8,7 @@ let periodicAlerts = [];
 let periodicIntervals = {};
 
 // 앱 버전 (빌드/배포 시점에 설정, 푸시할 때마다 update-version.js로 업데이트)
-const APP_VERSION = 'v2512301717'; // update-version.js로 자동 업데이트됨
+const APP_VERSION = 'v2512301729'; // update-version.js로 자동 업데이트됨
 
 // 버전 표시 (고정된 업데이트 시간)
 function displayVersion() {
@@ -1034,6 +1034,20 @@ function addPeriodicAlert(symbol, interval, stock) {
 }
 
 function createPeriodicAlert(symbol, interval, stock) {
+    // 주기적 알림에 등록된 종목이 stocks 배열에 있는지 확인하고, 없으면 추가
+    // 이렇게 하면 백그라운드에서도 메모리의 stocks 배열을 사용할 수 있음
+    let stockInMemory = stocks.find(s => s.symbol === symbol);
+    if (!stockInMemory) {
+        stocks.push(stock);
+        saveStocksToStorage();
+        console.log(`[주기적 알림] ${symbol}을 stocks 배열에 추가했습니다.`);
+    } else {
+        // 이미 있으면 최신 데이터로 업데이트
+        const index = stocks.findIndex(s => s.symbol === symbol);
+        stocks[index] = stock;
+        saveStocksToStorage();
+    }
+
     const periodicAlert = {
         id: Date.now(),
         symbol: symbol,
@@ -1067,11 +1081,25 @@ async function checkPeriodicAlert(periodicAlert) {
     try {
         console.log(`[주기적 알림] ${periodicAlert.symbol} 체크 중...`);
         
-        // 주식 데이터 가져오기
-        const stockData = await fetchStockData(periodicAlert.symbol);
+        // 먼저 메모리에 있는 stocks 배열에서 찾기 (백그라운드에서도 작동)
+        let stockData = stocks.find(s => s.symbol === periodicAlert.symbol);
+        
+        // 메모리에 없으면 새로 가져오기 (포그라운드에서만 작동)
         if (!stockData) {
-            console.warn(`[주기적 알림] ${periodicAlert.symbol} 데이터를 가져올 수 없습니다.`);
-            return;
+            console.log(`[주기적 알림] ${periodicAlert.symbol} 메모리에 없음, 새로 가져오는 중...`);
+            stockData = await fetchStockData(periodicAlert.symbol);
+            if (!stockData) {
+                console.warn(`[주기적 알림] ${periodicAlert.symbol} 데이터를 가져올 수 없습니다.`);
+                return;
+            }
+            // 가져온 데이터를 stocks 배열에 추가 (다음 체크를 위해)
+            const existingIndex = stocks.findIndex(s => s.symbol === periodicAlert.symbol);
+            if (existingIndex >= 0) {
+                stocks[existingIndex] = stockData;
+            } else {
+                stocks.push(stockData);
+            }
+            saveStocksToStorage();
         }
 
         const currentPrice = stockData.price;
@@ -1402,8 +1430,8 @@ setInterval(() => {
     if (stocks.length > 0 && alerts.length > 0) {
         checkAlerts();
     }
-    // 주기적 알림도 체크
-    if (periodicAlerts.length > 0) {
+    // 주기적 알림도 체크 (메모리의 stocks 배열 사용 - 백그라운드에서도 작동)
+    if (periodicAlerts.length > 0 && stocks.length > 0) {
         periodicAlerts.forEach(alert => {
             if (alert.active) {
                 // 각 주기적 알림의 마지막 체크 시간 확인
