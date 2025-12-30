@@ -4,7 +4,7 @@ let stocks = [];
 let alerts = [];
 
 // 앱 버전 (빌드/배포 시점에 설정, 푸시할 때마다 update-version.js로 업데이트)
-const APP_VERSION = 'v2512301640'; // update-version.js로 자동 업데이트됨
+const APP_VERSION = 'v2512301641'; // update-version.js로 자동 업데이트됨
 
 // 버전 표시 (고정된 업데이트 시간)
 function displayVersion() {
