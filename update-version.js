@@ -4,14 +4,23 @@
 const fs = require('fs');
 const path = require('path');
 
-// 현재 시간으로 버전 생성
+// 한국 시간(KST, UTC+9)으로 버전 생성
 const now = new Date();
-const year = now.getFullYear().toString().slice(-2);
-const month = String(now.getMonth() + 1).padStart(2, '0');
-const day = String(now.getDate()).padStart(2, '0');
-const hour = String(now.getHours()).padStart(2, '0');
-const minute = String(now.getMinutes()).padStart(2, '0');
-const version = `v${year}${month}${day}${hour}${minute}`;
+// 한국 시간으로 변환 (UTC+9)
+const koreaTimeStr = now.toLocaleString('en-US', { 
+    timeZone: 'Asia/Seoul',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+});
+// "12/30/2024, 16:11" 형식을 파싱
+const [datePart, timePart] = koreaTimeStr.split(', ');
+const [month, day, year] = datePart.split('/');
+const [hour, minute] = timePart.split(':');
+const version = `v${year.slice(-2)}${month.padStart(2, '0')}${day.padStart(2, '0')}${hour.padStart(2, '0')}${minute.padStart(2, '0')}`;
 
 // index.html 읽기
 const indexPath = path.join(__dirname, 'index.html');
