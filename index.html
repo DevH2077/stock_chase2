@@ -6,9 +6,9 @@
     <meta name="description" content="주식 현재 시세를 실시간으로 확인하는 PWA">
     <meta name="theme-color" content="#2196F3">
     <title>주식 시세 PWA</title>
-    <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" href="styles.css">
-    <link rel="icon" type="image/png" href="icon-192.png">
+    <link rel="manifest" href="./manifest.json">
+    <link rel="stylesheet" href="./styles.css">
+    <link rel="icon" type="image/png" href="./icon-192.png">
 </head>
 <body>
     <div class="container">
@@ -94,12 +94,12 @@
         </div>
     </div>
 
-    <script src="app.js"></script>
+    <script src="./app.js"></script>
     <script>
         // 서비스 워커 등록
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('service-worker.js')
+                navigator.serviceWorker.register('./service-worker.js', { scope: './' })
                     .then(reg => console.log('Service Worker 등록 성공:', reg))
                     .catch(err => console.log('Service Worker 등록 실패:', err));
             });

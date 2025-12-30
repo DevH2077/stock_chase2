@@ -1,12 +1,13 @@
 const CACHE_NAME = 'stock-pwa-v1';
+const BASE_PATH = self.location.pathname.replace('/service-worker.js', '');
 const urlsToCache = [
-  '/',
-  '/index.html',
-  '/styles.css',
-  '/app.js',
-  '/manifest.json',
-  '/icon-192.png',
-  '/icon-512.png'
+  BASE_PATH + '/',
+  BASE_PATH + '/index.html',
+  BASE_PATH + '/styles.css',
+  BASE_PATH + '/app.js',
+  BASE_PATH + '/manifest.json',
+  BASE_PATH + '/icon-192.png',
+  BASE_PATH + '/icon-512.png'
 ];
 
 // 설치 이벤트
@@ -70,15 +71,16 @@ self.addEventListener('notificationclick', (event) => {
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
       // 이미 열려있는 창이 있으면 포커스
+      const baseUrl = self.location.origin + self.location.pathname.replace('/service-worker.js', '');
       for (let i = 0; i < clientList.length; i++) {
         const client = clientList[i];
-        if (client.url === '/' && 'focus' in client) {
+        if (client.url.startsWith(baseUrl) && 'focus' in client) {
           return client.focus();
         }
       }
       // 새 창 열기
       if (clients.openWindow) {
-        return clients.openWindow('/');
+        return clients.openWindow(baseUrl + '/index.html');
       }
     })
   );

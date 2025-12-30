@@ -721,8 +721,8 @@ function triggerAlert(alert, currentPrice) {
     if ('Notification' in window && Notification.permission === 'granted') {
         new Notification('📈 주식 알림', {
             body: message,
-            icon: '/icon-192.png',
-            badge: '/icon-192.png',
+            icon: './icon-192.png',
+            badge: './icon-192.png',
             tag: `alert-${alert.id}`,
             requireInteraction: true
         });
@@ -733,8 +733,8 @@ function triggerAlert(alert, currentPrice) {
         navigator.serviceWorker.ready.then(registration => {
             registration.showNotification('📈 주식 알림', {
                 body: message,
-                icon: '/icon-192.png',
-                badge: '/icon-192.png',
+                icon: './icon-192.png',
+                badge: './icon-192.png',
                 tag: `alert-${alert.id}`,
                 requireInteraction: true,
                 vibrate: [200, 100, 200]
