@@ -566,6 +566,16 @@ function hideError() {
     errorMessage.style.display = 'none';
 }
 
+// 성공 메시지 표시
+function showSuccessMessage(message) {
+    errorMessage.textContent = message;
+    errorMessage.className = 'error-message success-message';
+    errorMessage.style.display = 'block';
+    setTimeout(() => {
+        errorMessage.style.display = 'none';
+    }, 3000);
+}
+
 // 로딩 표시
 function showLoading() {
     loading.style.display = 'block';
@@ -625,8 +635,25 @@ function addAlert(symbol, alertType, value, direction) {
     saveAlertsToStorage();
     renderAlerts();
     
+    // 성공 메시지 표시
+    showSuccessMessage(`알림이 등록되었습니다: ${alert.symbol} ${alert.alertType === 'price' ? '가격' : '퍼센트'} ${alert.direction === 'above' ? '≥' : '≤'} ${alert.alertType === 'price' ? `$${formatNumber(alert.value)}` : `${alert.value}%`}`);
+    
+    // 알림 목록으로 스크롤
+    setTimeout(() => {
+        alertsList.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        // 새로 추가된 알림 하이라이트
+        const newAlertElement = document.querySelector(`[data-alert-id="${alert.id}"]`);
+        if (newAlertElement) {
+            newAlertElement.classList.add('alert-new');
+            setTimeout(() => {
+                newAlertElement.classList.remove('alert-new');
+            }, 2000);
+        }
+    }, 100);
+    
     // 폼 초기화
     alertValue.value = '';
+    alertSymbol.value = '';
     showError(''); // 에러 메시지 제거
 }
 
@@ -644,24 +671,39 @@ function renderAlerts() {
             ? alert.value 
             : alert.currentPrice * (1 + (alert.direction === 'above' ? 1 : -1) * alert.value / 100);
         
+        const percentChange = alert.alertType === 'percent' 
+            ? ((currentPrice - alert.currentPrice) / alert.currentPrice * 100).toFixed(2)
+            : null;
+        const remainingPercent = alert.alertType === 'percent'
+            ? (alert.direction === 'above' 
+                ? (alert.value - parseFloat(percentChange)).toFixed(2)
+                : (parseFloat(percentChange) + alert.value).toFixed(2))
+            : null;
+        
         return `
-            <div class="alert-item ${alert.triggered ? 'alert-triggered' : ''}">
+            <div class="alert-item ${alert.triggered ? 'alert-triggered' : ''}" data-alert-id="${alert.id}">
                 <div class="alert-header">
-                    <div class="alert-symbol">${alert.symbol}</div>
-                    <button class="alert-remove-btn" onclick="removeAlert(${alert.id})">×</button>
+                    <div class="alert-symbol">${alert.symbol} <span class="alert-name">${alert.name}</span></div>
+                    <button class="alert-remove-btn" onclick="removeAlert(${alert.id})" aria-label="알림 삭제">×</button>
                 </div>
                 <div class="alert-info">
                     <div class="alert-target">
-                        ${alert.alertType === 'price' ? '가격' : '퍼센트'} 
+                        <strong>목표:</strong> ${alert.alertType === 'price' ? '가격' : '퍼센트'} 
                         ${alert.direction === 'above' ? '≥' : '≤'} 
                         ${alert.alertType === 'price' ? `$${formatNumber(alert.value)}` : `${alert.value}%`}
                     </div>
                     <div class="alert-current">
-                        현재: $${formatNumber(currentPrice)}
-                        ${alert.alertType === 'percent' ? ` (${((currentPrice - alert.currentPrice) / alert.currentPrice * 100).toFixed(2)}%)` : ''}
+                        <strong>현재:</strong> $${formatNumber(currentPrice)}
+                        ${percentChange !== null ? ` <span class="alert-change">(${percentChange > 0 ? '+' : ''}${percentChange}%)</span>` : ''}
                     </div>
+                    ${remainingPercent !== null && !alert.triggered ? `
+                    <div class="alert-progress">
+                        목표까지: ${remainingPercent > 0 ? '+' : ''}${remainingPercent}%
+                    </div>
+                    ` : ''}
                 </div>
                 ${alert.triggered ? '<div class="alert-status">✓ 알림 발송됨</div>' : ''}
+                <div class="alert-time">등록: ${formatTime(alert.createdAt)}</div>
             </div>
         `;
     }).join('');
