@@ -3,26 +3,31 @@ let stocks = [];
 // 알림 목록
 let alerts = [];
 
-// 버전 자동 갱신 (년월일시분 형식)
-function updateVersion() {
-    const now = new Date();
-    const year = now.getFullYear().toString().slice(-2); // 마지막 2자리
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    const hour = String(now.getHours()).padStart(2, '0');
-    const minute = String(now.getMinutes()).padStart(2, '0');
-    const version = `v${year}${month}${day}${hour}${minute}`;
-    
+// 버전 표시 (고정된 업데이트 시간)
+function displayVersion() {
+    // HTML에 하드코딩된 버전 사용 (빌드 시점에 고정)
+    // 또는 manifest나 메타 태그에서 읽어오기
     const versionBadge = document.getElementById('versionBadge');
     if (versionBadge) {
-        versionBadge.textContent = version;
+        // 버전이 이미 HTML에 있으면 그대로 사용
+        // 없으면 기본값 표시
+        if (!versionBadge.textContent || versionBadge.textContent === 'v3') {
+            // 현재 시간을 버전으로 설정 (최초 로드 시에만)
+            const now = new Date();
+            const year = now.getFullYear().toString().slice(-2);
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const hour = String(now.getHours()).padStart(2, '0');
+            const minute = String(now.getMinutes()).padStart(2, '0');
+            const version = `v${year}${month}${day}${hour}${minute}`;
+            versionBadge.textContent = version;
+        }
+        // 이미 버전이 있으면 그대로 유지 (새로고침해도 변경되지 않음)
     }
 }
 
-// 페이지 로드 시 버전 업데이트
-updateVersion();
-// 매 분마다 버전 업데이트
-setInterval(updateVersion, 60 * 1000);
+// 페이지 로드 시 버전 표시 (한 번만)
+displayVersion();
 
 // DOM 요소
 const stockInput = document.getElementById('stockInput');
