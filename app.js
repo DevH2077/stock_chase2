@@ -58,10 +58,39 @@ stockInput.addEventListener('keypress', (e) => {
 refreshBtn.addEventListener('click', refreshAllStocks);
 addAlertBtn.addEventListener('click', handleAddAlert);
 
-// 알림 권한 요청
-if ('Notification' in window && Notification.permission === 'default') {
-    Notification.requestPermission();
+// 알림 권한 요청 및 확인
+async function requestNotificationPermission() {
+    if ('Notification' in window) {
+        if (Notification.permission === 'default') {
+            const permission = await Notification.requestPermission();
+            if (permission === 'granted') {
+                console.log('알림 권한이 허용되었습니다.');
+                // Service Worker 등록 확인
+                if ('serviceWorker' in navigator) {
+                    try {
+                        const registration = await navigator.serviceWorker.ready;
+                        console.log('Service Worker 준비 완료:', registration);
+                    } catch (error) {
+                        console.error('Service Worker 준비 실패:', error);
+                    }
+                }
+            } else {
+                console.warn('알림 권한이 거부되었습니다.');
+            }
+        } else if (Notification.permission === 'granted') {
+            console.log('알림 권한이 이미 허용되어 있습니다.');
+        } else {
+            console.warn('알림 권한이 거부되어 있습니다. 브라우저 설정에서 권한을 허용해주세요.');
+        }
+    } else {
+        console.warn('이 브라우저는 알림을 지원하지 않습니다.');
+    }
 }
+
+// 페이지 로드 시 알림 권한 확인
+window.addEventListener('load', () => {
+    requestNotificationPermission();
+});
 
 // 검색 처리
 async function handleSearch() {
